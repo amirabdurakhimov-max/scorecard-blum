@@ -157,7 +157,7 @@ th{padding:8px 8px;font-size:.6rem}td{padding:8px 8px;font-size:.7rem}
       <div class="logo-icon">SC</div>
       <div><h1>Scorecard</h1><span>Управление продажами <span id="syncStatus" class="sync-dot loading"></span></span></div>
     </div>
-    <div class="tabs" id="viewTabs">
+    <div class="tabs" id="viewTabs" style="display:none">
       <div class="tab active" data-view="dashboard" onclick="switchView('dashboard')">📊 Панель</div>
       <div class="tab" data-view="input" onclick="switchView('input')">📝 Ввод</div>
       <div class="tab" data-view="history" onclick="switchView('history')">📅 История</div>
@@ -165,6 +165,31 @@ th{padding:8px 8px;font-size:.6rem}td{padding:8px 8px;font-size:.7rem}
       <div class="tab" onclick="exportCSV()" style="color:var(--green)">⬇️ Excel</div>
     </div>
   </div>
+  <div class="store-sel">
+    <button type="button" class="store-btn active" data-store="furn" onclick="switchStore('furn')">🪑 Фурнитура</button>
+    <button type="button" class="store-btn" data-store="tech" onclick="switchStore('tech')">🔌 Бытовая техника</button>
+    <button type="button" class="store-btn" data-store="all" onclick="switchStore('all')">📊 Оба</button>
+  </div>
+
+  <!-- LOGIN SCREEN -->
+  <div id="loginScreen" style="display:flex;align-items:center;justify-content:center;min-height:80vh">
+    <div class="card" style="max-width:360px;width:100%;text-align:center">
+      <div class="logo-icon" style="margin:0 auto 16px;width:56px;height:56px;font-size:22px">SC</div>
+      <h2 style="font-size:1.2rem;margin-bottom:4px">Scorecard</h2>
+      <p style="color:var(--text3);font-size:.82rem;margin-bottom:24px">Введите логин и пароль</p>
+      <div class="form-group" style="margin-bottom:12px">
+        <input type="text" id="loginUser" placeholder="Логин" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:12px 14px;border-radius:var(--radius-xs);font-size:16px;width:100%;font-family:inherit;-webkit-appearance:none">
+      </div>
+      <div class="form-group" style="margin-bottom:16px">
+        <input type="password" id="loginPass" placeholder="Пароль" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:12px 14px;border-radius:var(--radius-xs);font-size:16px;width:100%;font-family:inherit;-webkit-appearance:none">
+      </div>
+      <div id="loginError" style="color:var(--red);font-size:.82rem;margin-bottom:12px;display:none">Неверный логин или пароль</div>
+      <button type="button" class="btn btn-primary" onclick="doLogin()" style="width:100%;justify-content:center;font-size:.9rem;padding:14px">Войти</button>
+    </div>
+  </div>
+
+  <!-- MAIN APP (hidden until login) -->
+  <div id="mainApp" style="display:none">
   <div class="store-sel">
     <button type="button" class="store-btn active" data-store="furn" onclick="switchStore('furn')">🪑 Фурнитура</button>
     <button type="button" class="store-btn" data-store="tech" onclick="switchStore('tech')">🔌 Бытовая техника</button>
@@ -182,6 +207,7 @@ th{padding:8px 8px;font-size:.6rem}td{padding:8px 8px;font-size:.7rem}
       <input type="date" id="rangeTo" onchange="renderAll()">
     </span>
     <button type="button" class="btn btn-secondary btn-sm" onclick="goToday()">Сегодня</button>
+    <button type="button" class="btn btn-danger btn-sm" onclick="doLogout()">🚪 Выход</button>
   </div>
   <div id="monthButtons" style="display:flex;gap:5px;margin:-8px 0 14px;flex-wrap:wrap">
     <button type="button" class="btn btn-sm btn-secondary" onclick="pickMonth('2026-01')" style="font-size:.72rem">Янв</button>
@@ -194,18 +220,6 @@ th{padding:8px 8px;font-size:.6rem}td{padding:8px 8px;font-size:.7rem}
     <button type="button" class="btn btn-sm btn-secondary" onclick="pickMonths('2026-01','2026-04')" style="font-size:.72rem">Янв-Апр</button>
     <button type="button" class="btn btn-sm btn-secondary" onclick="pickMonths('2026-04','2026-06')" style="font-size:.72rem">Апр-Июн</button>
   </div>
-
-  <!-- SETUP BANNER -->
-  <div class="setup-banner" id="setupBanner" style="display:none">
-    <h3>⚙️ Настройка Google Sheets</h3>
-    <p>Для онлайн-доступа вставьте URL вашего Google Apps Script:</p>
-    <div style="margin-top:10px;display:flex;gap:8px">
-      <input type="text" id="apiUrlInput" placeholder="https://script.google.com/macros/s/xxx/exec" style="flex:1;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.2);color:#fff;padding:10px;border-radius:8px;font-size:14px">
-      <button type="button" class="btn btn-primary" onclick="saveApiUrl()">Сохранить</button>
-    </div>
-  </div>
-
-  <!-- DASHBOARD -->
   <div id="view-dashboard">
     <div class="stats-grid" id="statsGrid"></div>
     <div class="card" style="margin:16px 0"><div class="card-title">🎯 Выполнение плана</div><div id="planBars"></div></div>
@@ -243,6 +257,7 @@ th{padding:8px 8px;font-size:.6rem}td{padding:8px 8px;font-size:.7rem}
       <div class="analysis" style="margin-top:14px"><h3>📋 Детальный анализ</h3><div id="deepAnalysis"></div></div>
     </div>
   </div>
+  </div><!-- end mainApp -->
   <!-- MODALS -->
   <div class="modal-overlay" id="editModal"><div class="modal"><h2>✏️ Редактирование</h2><div id="editForm"></div><div class="modal-actions"><button type="button" class="btn btn-secondary" onclick="closeModal()">Отмена</button><button type="button" class="btn btn-danger" onclick="delEntry()">Удалить</button><button type="button" class="btn btn-primary" onclick="saveEdit()">Сохранить</button></div></div></div>
   <div class="modal-overlay" id="planModal"><div class="modal"><h2>🎯 План на месяц</h2><div class="form-grid" id="planForm"></div><div class="modal-actions"><button type="button" class="btn btn-secondary" onclick="closePM()">Отмена</button><button type="button" class="btn btn-primary" onclick="savePlan()">Сохранить</button></div></div></div>
@@ -252,7 +267,57 @@ th{padding:8px 8px;font-size:.6rem}td{padding:8px 8px;font-size:.7rem}
 // ║  НАСТРОЙКА: Вставьте ваш Google Apps       ║
 // ║  Script URL ниже (между кавычками)         ║
 // ╚════════════════════════════════════════════╝
-var API_URL = localStorage.getItem('scorecard_api_url') || '';
+var API_URL = 'https://script.google.com/macros/s/AKfycbwR-OHzX_SCQOw0U33fDtYtLDqea0AY1BKvlrKrn8zA2JxITpIOKrXJF_AhvR6fFWbFlg/exec';
+
+// ─── LOGIN SYSTEM ───
+const USERS = {
+  'admin': '8444aka',
+  'blum': '2015',
+  'umar': '0075'
+};
+var currentUser = localStorage.getItem('scorecard_user') || '';
+
+function doLogin(){
+  var user = document.getElementById('loginUser').value.trim().toLowerCase();
+  var pass = document.getElementById('loginPass').value;
+  if(USERS[user] && USERS[user] === pass){
+    currentUser = user;
+    localStorage.setItem('scorecard_user', user);
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    document.getElementById('viewTabs').style.display = 'flex';
+    document.getElementById('loginError').style.display = 'none';
+    init();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+  }
+}
+
+function doLogout(){
+  currentUser = '';
+  localStorage.removeItem('scorecard_user');
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('viewTabs').style.display = 'none';
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+}
+
+// Auto-login if saved
+function checkAutoLogin(){
+  if(currentUser && USERS[currentUser]){
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    document.getElementById('viewTabs').style.display = 'flex';
+    init();
+  }
+}
+// Enter key for login
+document.addEventListener('keydown', function(e){
+  if(e.key==='Enter' && document.getElementById('loginScreen').style.display!=='none'){
+    doLogin();
+  }
+});
 
 const SK='scorecard_v10',PK='scorecard_plans_v10';
 const SRC=[
@@ -279,14 +344,13 @@ let _dc={},_pc={};
 function setSyncStatus(s){var el=document.getElementById('syncStatus');if(el){el.className='sync-dot '+s}}
 
 async function loadFromAPI(){
-  if(!API_URL){document.getElementById('setupBanner').style.display='block';return false}
+  if(!API_URL)return false;
   try{
     setSyncStatus('loading');
     var r=await fetch(API_URL+'?action=getAll');
     var j=await r.json();
     if(j.data)_dc=j.data;
     if(j.plans)_pc=j.plans;
-    // Cache locally
     try{localStorage.setItem(SK,JSON.stringify(_dc));localStorage.setItem(PK,JSON.stringify(_pc))}catch{}
     setSyncStatus('ok');
     return true;
@@ -312,26 +376,9 @@ async function saveToAPI(action,body){
 }
 
 function ld(){return _dc}
-function sv(d){
-  _dc=d;
-  try{localStorage.setItem(SK,JSON.stringify(d))}catch{}
-}
+function sv(d){_dc=d;try{localStorage.setItem(SK,JSON.stringify(d))}catch{}}
 function ldP(){return _pc}
-function svP(p){
-  _pc=p;
-  try{localStorage.setItem(PK,JSON.stringify(p))}catch{}
-}
-
-function saveApiUrl(){
-  var url=document.getElementById('apiUrlInput').value.trim();
-  if(url){
-    API_URL=url;
-    localStorage.setItem('scorecard_api_url',url);
-    document.getElementById('setupBanner').style.display='none';
-    toast('✅ API URL сохранён!');
-    init();
-  }
-}
+function svP(p){_pc=p;try{localStorage.setItem(PK,JSON.stringify(p))}catch{}}
 
 function gk(s,d){return s+'_'+d}
 function ge(s,d){return ld()[gk(s,d)]||null}
@@ -664,11 +711,10 @@ async function init(){
   loadLocal();
   importData();
   var apiOk=await loadFromAPI();
-  if(!apiOk&&!API_URL)document.getElementById('setupBanner').style.display='block';
   document.getElementById('currentDate').value=today();
   renderAll();
 }
-init();
+checkAutoLogin();
 </script>
 </body>
 </html>
