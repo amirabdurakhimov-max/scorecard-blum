@@ -163,14 +163,9 @@ th{padding:8px 8px;font-size:.6rem}td{padding:8px 8px;font-size:.7rem}
       <div class="tab" data-view="history" onclick="switchView('history')">📅 История</div>
       <div class="tab" data-view="analytics" onclick="switchView('analytics')">📈 Аналитика</div>
       <div class="tab" onclick="exportCSV()" style="color:var(--green)">⬇️ Excel</div>
+      <div class="tab" onclick="doLogout()" style="color:var(--red)">🚪</div>
     </div>
   </div>
-  <div class="store-sel">
-    <button type="button" class="store-btn active" data-store="furn" onclick="switchStore('furn')">🪑 Фурнитура</button>
-    <button type="button" class="store-btn" data-store="tech" onclick="switchStore('tech')">🔌 Бытовая техника</button>
-    <button type="button" class="store-btn" data-store="all" onclick="switchStore('all')">📊 Оба</button>
-  </div>
-
   <!-- LOGIN SCREEN -->
   <div id="loginScreen" style="display:flex;align-items:center;justify-content:center;min-height:80vh">
     <div class="card" style="max-width:360px;width:100%;text-align:center">
@@ -190,6 +185,7 @@ th{padding:8px 8px;font-size:.6rem}td{padding:8px 8px;font-size:.7rem}
 
   <!-- MAIN APP (hidden until login) -->
   <div id="mainApp" style="display:none">
+  <div id="userBadge" style="font-size:.78rem;color:var(--text3);margin-bottom:8px">👤 <span id="userName"></span></div>
   <div class="store-sel">
     <button type="button" class="store-btn active" data-store="furn" onclick="switchStore('furn')">🪑 Фурнитура</button>
     <button type="button" class="store-btn" data-store="tech" onclick="switchStore('tech')">🔌 Бытовая техника</button>
@@ -207,7 +203,6 @@ th{padding:8px 8px;font-size:.6rem}td{padding:8px 8px;font-size:.7rem}
       <input type="date" id="rangeTo" onchange="renderAll()">
     </span>
     <button type="button" class="btn btn-secondary btn-sm" onclick="goToday()">Сегодня</button>
-    <button type="button" class="btn btn-danger btn-sm" onclick="doLogout()">🚪 Выход</button>
   </div>
   <div id="monthButtons" style="display:flex;gap:5px;margin:-8px 0 14px;flex-wrap:wrap">
     <button type="button" class="btn btn-sm btn-secondary" onclick="pickMonth('2026-01')" style="font-size:.72rem">Янв</button>
@@ -286,6 +281,7 @@ function doLogin(){
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainApp').style.display = 'block';
     document.getElementById('viewTabs').style.display = 'flex';
+    document.getElementById('userName').textContent = user;
     document.getElementById('loginError').style.display = 'none';
     init();
   } else {
@@ -303,12 +299,12 @@ function doLogout(){
   document.getElementById('loginPass').value = '';
 }
 
-// Auto-login if saved
 function checkAutoLogin(){
   if(currentUser && USERS[currentUser]){
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainApp').style.display = 'block';
     document.getElementById('viewTabs').style.display = 'flex';
+    document.getElementById('userName').textContent = currentUser;
     init();
   }
 }
