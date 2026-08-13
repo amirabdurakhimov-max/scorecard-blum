@@ -1271,26 +1271,53 @@ function renderConvChart(){var p=getAPeriod(),d=gdi(),st=ST.store,slots=aSlots(p
   if(note)note.textContent=st==='all'?('Техника: '+techTotal()+' за период — продажи с задержкой.'):''}
 function renderRetChart(){var p=getAPeriod(),d=gdi(),st=ST.store,slots=aSlots(p,d);if(slots.length<2){chartMsg('retChart','Недостаточно данных для графика\nВыберите период «Неделя» или «Месяц»');return}var labels=slots.map(function(s){return s.label});var vals=slots.map(function(sl){var m=aMetrics(st,sl.per,sl.ref);return m.sAmt>0?+(m.ret/m.sAmt*100).toFixed(1):0});renderTrendLine('retChart',labels,[{name:'',color:'#ff453a',vals:vals}],'%')}
 function renderBest(){var p=getAPeriod(),entries=getEntriesForPeriod(ST.store==='all'?'all':ST.store,p,gdi());var byDate={};entries.forEach(function(e){byDate[e.date]=(byDate[e.date]||0)+revOf(e)});var sorted=Object.keys(byDate).map(function(dt){return{date:dt,_a:byDate[dt]}}).sort(function(a,b){return b._a-a._a}).slice(0,5);var ranks=['#1','#2','#3','#4','#5'],col=['#FFD700','#C0C0C0','#CD7F32','var(--text3)','var(--text3)'];document.getElementById('bestDays').innerHTML=sorted.length?sorted.map(function(e,i){return'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:.84rem"><span style="display:flex;align-items:center;gap:8px"><span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:'+col[i]+';color:#fff;font-size:.66rem;font-weight:700">'+ranks[i]+'</span> '+new Date(e.date).toLocaleDateString('ru-RU',{day:'numeric',month:'short'})+'</span><span style="font-weight:600;color:var(--green)">'+fU(e._a)+'</span></div>'}).join(''):'<div style="color:var(--text3);padding:16px 0">Нет данных</div>'}
-function renderComp(){var p=getAPeriod(),d=gdi(),fS2=agg('furn',p,d),tS=agg('tech',p,d),tC=tcmp(tS);var el=document.getElementById('storeComp');el.innerHTML='<div style="font-size:.72rem;color:var(--text3);margin-bottom:8px">Показаны оба магазина за период (независимо от фильтра).</div>';[{l:'Гости',b:fS2.guests||0,t:tC.tg},{l:'Продажи',b:fS2.sales_count||0,t:tC.ts},{l:'Выручка',b:fS2.sales_amount||0,t:tC.ta,u:1}].forEach(function(m){var tot=m.b+m.t||1,bP=Math.round(m.b/tot*100);el.innerHTML+='<div style="margin-bottom:11px"><div style="font-size:.76rem;color:var(--text2);margin-bottom:4px">'+m.l+'</div><div style="display:flex;height:22px;border-radius:6px;overflow:hidden;font-size:.7rem;font-family:\'SF Mono\',monospace"><div style="width:'+bP+'%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;min-width:35px">'+(m.u?fU(m.b):fmt(m.b))+'</div><div style="width:'+(100-bP)+'%;background:var(--green);display:flex;align-items:center;justify-content:center;color:#fff;min-width:35px">'+(m.u?fU(m.t):fmt(m.t))+'</div></div><div style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--text3);margin-top:2px"><span>'+icon('sofa')+' '+bP+'%</span><span>'+icon('plug')+' '+(100-bP)+'%</span></div></div>'})}
+function renderComp(){var p=getAPeriod(),d=gdi(),fS2=agg('furn',p,d),tS=agg('tech',p,d),tC=tcmp(tS);var el=document.getElementById('storeComp');el.innerHTML='<div style="font-size:.72rem;color:var(--text3);margin-bottom:8px">Показаны оба магазина за период (независимо от фильтра).</div>';[{l:'Гости',b:fS2.guests||0,t:tC.tg},{l:'Продажи',b:fS2.sales_count||0,t:tC.ts},{l:'Выручка',b:fS2.sales_amount||0,t:tC.ta,u:1}].forEach(function(m){var tot=m.b+m.t||1,bP=Math.round(m.b/tot*100);el.innerHTML+='<div style="margin-bottom:11px"><div style="font-size:.76rem;color:var(--text2);margin-bottom:4px">'+m.l+'</div><div style="display:flex;height:22px;border-radius:6px;overflow:hidden;font-size:.7rem;font-family:\'SF Mono\',monospace"><div style="width:'+bP+'%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:var(--bg-solid);min-width:35px">'+(m.u?fU(m.b):fmt(m.b))+'</div><div style="width:'+(100-bP)+'%;background:#357a4d;display:flex;align-items:center;justify-content:center;color:#fff;min-width:35px">'+(m.u?fU(m.t):fmt(m.t))+'</div></div><div style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--text3);margin-top:2px"><span>'+icon('sofa')+' '+bP+'%</span><span>'+icon('plug')+' '+(100-bP)+'%</span></div></div>'})}
 function renderDeep(){
-  var d=gdi(),p=getAPeriod(),entries=getEntriesForPeriod(ST.store==='all'?'all':ST.store,p,d),tips=[];
-  var byDate={};entries.forEach(function(e){byDate[e.date]=(byDate[e.date]||0)+revOf(e)});
-  var days=Object.keys(byDate).sort(),dayRevs=days.map(function(dt){return byDate[dt]});
-  if(days.length<3){document.getElementById('deepAnalysis').innerHTML='<div class="ai good">Нужно 3+ дня данных.</div>';return}
-  var totalRev=dayRevs.reduce(function(a,b){return a+b},0),avgD=totalRev/days.length;
-  var pbG=periodBounds(p,d),tgAll=rangeMetrics(ST.store,pbG.startDate,pbG.endDate).guests;
-  if(tgAll>0)tips.push({t:'',m:'👥 Всего гостей: '+fmt(tgAll)+' · в среднем '+fmt(Math.round(tgAll/days.length))+' гостей/день'});
-  var doF=ST.store==='furn'||ST.store==='all',doT=ST.store==='tech'||ST.store==='all';
-  if(doF){var fE=getEntriesForPeriod('furn',p,d),fBad=fE.filter(function(e){return (e.sales_count||0)>0&&!(e.guests>0)}).length,fV=fE.filter(function(e){return (e.guests||0)>0}),fg=fV.reduce(function(s,e){return s+(e.guests||0)},0),frc=fV.reduce(function(s,e){return s+(e.sales_count||0)},0);
-    if(fg>0)tips.push({t:'',m:'🧾 Фурнитура — чеков на гостя: '+(frc/fg).toFixed(2)+' ('+fmt(frc)+' чеков / '+fmt(fg)+' гостей)'});else tips.push({t:'warn',m:'🛋️ Фурнитура — чеков на гостя: Нет данных о гостях'});
-    if(fBad>0)tips.push({t:'bad',m:'⚠️ Фурнитура: '+fBad+' '+plur(fBad,'день','дня','дней')+' без данных о гостях — показатели неточные'});
-    var c=fcmp(agg('furn',p,d));if(c.avg>0)tips.push({t:c.avg<100?'warn':'good',m:'💰 Средний чек фурнитуры: '+fU(c.avg)})}
-  if(doT){var tE=getEntriesForPeriod('tech',p,d),teg=function(e){var g=0;SRC.forEach(function(x){g+=(e['g_'+x.id]||0)});return g},tesf=function(e){var v=0;SRC.forEach(function(x){v+=(e['sc_'+x.id]||0)});return v};
-    var tg=tE.reduce(function(s,e){return s+teg(e)},0),trc=tE.reduce(function(s,e){return s+tesf(e)},0);
-    if(tg>0)tips.push({t:'',m:'🧾 Техника — чеков на гостя за период: '+(trc/tg).toFixed(2)+' ('+fmt(trc)+' чеков / '+fmt(tg)+' гостей)'});else tips.push({t:'warn',m:'📱 Техника — чеков на гостя: Нет данных о гостях'})}
-  if(days.length>=10){var half=Math.floor(days.length/2),avg1=dayRevs.slice(0,half).reduce(function(s,v){return s+v},0)/half,avg2=dayRevs.slice(half).reduce(function(s,v){return s+v},0)/(days.length-half);var ch=avg1>0?((avg2-avg1)/avg1*100).toFixed(0):0;tips.push({t:ch>10?'good':ch<-10?'bad':'good',m:(ch>10?'📈 Рост +'+ch+'%':ch<-10?'📉 Падение '+Math.abs(ch)+'%':'➡️ Стабильно')+' ('+fU(Math.round(avg2))+'/день vs '+fU(Math.round(avg1))+'/день)'})}
-  if(days.length>=5){var cv=avgD>0?(Math.sqrt(dayRevs.reduce(function(s,v){return s+Math.pow(v-avgD,2)},0)/dayRevs.length)/avgD*100).toFixed(0):0;tips.push({t:cv>60?'warn':'good',m:'📊 '+(cv>60?'Нестабильные':'Стабильные')+' продажи ('+cv+'% вариация). Средняя: '+fU(Math.round(avgD))+'/день'})}
-  document.getElementById('deepAnalysis').innerHTML=tips.map(function(t){return'<div class="ai '+t.t+'">'+t.m+'</div>'}).join('');
+  var d=gdi(),p=getAPeriod(),st=ST.store,entries=getEntriesForPeriod(st==='all'?'all':st,p,d),el=document.getElementById('deepAnalysis');
+  if(!el)return;
+  var byDate={},byG={},byS={};
+  entries.forEach(function(e){byDate[e.date]=(byDate[e.date]||0)+revOf(e);var g=e.store==='furn'?(e.guests||0):0,sc=e.store==='furn'?(e.sales_count||0):0;if(e.store!=='furn'){SRC.forEach(function(x){g+=(e['g_'+x.id]||0);sc+=(e['sc_'+x.id]||0)})}byG[e.date]=(byG[e.date]||0)+g;byS[e.date]=(byS[e.date]||0)+sc});
+  var days=Object.keys(byDate).sort();
+  if(days.length<3){el.innerHTML='<div class="ai good">Нужно 3+ дня данных для анализа.</div>';return}
+  var dayRevs=days.map(function(dt){return byDate[dt]}),dayG=days.map(function(dt){return byG[dt]||0}),dayS=days.map(function(dt){return byS[dt]||0});
+  var totalRev=dayRevs.reduce(function(a,b){return a+b},0);
+  var doF=st==='furn'||st==='all',doT=st==='tech'||st==='all';
+  var pbG=periodBounds(p,d),pm=rangeMetrics(st,pbG.startDate,pbG.endDate);
+  var ctxRpg=pm.guests>0?(pm.sales/pm.guests).toFixed(2):'—',ctxChk=pm.sales>0?Math.round(pm.rev/pm.sales):0;
+  var ctx='<div style="font-size:.8rem;color:var(--text2);margin-bottom:10px;display:flex;gap:14px;flex-wrap:wrap"><span>'+icon('users')+' Гости: <b>'+fmt(pm.guests)+'</b></span><span>'+icon('cart')+' Чеков на гостя: <b>'+ctxRpg+'</b></span><span>'+icon('dollar')+' Средний чек: <b>'+fU(ctxChk)+'</b></span></div>';
+  var tips=[];
+  // 2) Traffic week-over-week
+  var cr=compareRanges('week',d),cw=rangeMetrics(st,cr.cs,cr.ce),pw=rangeMetrics(st,cr.ps,cr.pe);
+  if(pw.guests>0){var wp=Math.round((cw.guests-pw.guests)/pw.guests*100);if(wp<=-20)tips.push({pr:2,c:'bad',m:'📉 Трафик упал на '+Math.abs(wp)+'% за неделю ('+fmt(cw.guests)+' против '+fmt(pw.guests)+' гостей) — проверьте рекламу и пригласите постоянных клиентов.'})}
+  // 3) Revenue decline + 5) avg-check decline (period halves)
+  if(days.length>=10){var h=Math.floor(days.length/2),n1=h,n2=days.length-h;
+    var r1=dayRevs.slice(0,h).reduce(function(a,b){return a+b},0),r2=dayRevs.slice(h).reduce(function(a,b){return a+b},0);
+    var g1=dayG.slice(0,h).reduce(function(a,b){return a+b},0),g2=dayG.slice(h).reduce(function(a,b){return a+b},0);
+    var s1=dayS.slice(0,h).reduce(function(a,b){return a+b},0),s2=dayS.slice(h).reduce(function(a,b){return a+b},0);
+    var rAvg1=r1/n1,rAvg2=r2/n2;
+    if(rAvg1>0){var rp=Math.round((rAvg2-rAvg1)/rAvg1*100);
+      if(rp<=-15){var gAvg1=g1/n1,gp=gAvg1>0?Math.round((g2/n2-gAvg1)/gAvg1*100):0;var rpg1=g1>0?r1/g1:0,rpg2=g2>0?r2/g2:0,vp=rpg1>0?Math.round((rpg2-rpg1)/rpg1*100):0;
+        var drv,act;if(Math.abs(gp)>=Math.abs(vp)){drv='трафика ('+sg(gp)+' гостей)';act='усильте привлечение посетителей.'}else{drv='среднего чека ('+sg(vp)+')';act='предлагайте более дорогие модели и допродажи.'}
+        tips.push({pr:3,c:'bad',m:'📉 Выручка снизилась на '+Math.abs(rp)+'% — в основном из-за '+drv+'. '+act})}}
+    var chk1=s1>0?r1/s1:0,chk2=s2>0?r2/s2:0;
+    if(chk1>0){var cp=Math.round((chk2-chk1)/chk1*100);if(cp<=-10)tips.push({pr:5,c:'warn',m:'💰 Средний чек снизился на '+Math.abs(cp)+'% (с '+fU(Math.round(chk1))+' до '+fU(Math.round(chk2))+') — растёт доля недорогих товаров, предлагайте премиум-модели.'})}}
+  // 4) Slow weekday
+  if(days.length>=10){var wn=['понедельникам','вторникам','средам','четвергам','пятницам','субботам','воскресеньям'],ws=[0,0,0,0,0,0,0],wc=[0,0,0,0,0,0,0];
+    days.forEach(function(dt,i){var wd=new Date(dt+'T00:00:00').getDay(),ix=wd===0?6:wd-1;ws[ix]+=dayG[i];wc[ix]++});
+    var wavg=ws.map(function(s,i){return wc[i]>=1?s/wc[i]:null}),vw=wavg.filter(function(v){return v!=null});
+    if(vw.length>=3){var wov=vw.reduce(function(a,b){return a+b},0)/vw.length,si=-1,sv=1e9;
+      wavg.forEach(function(v,i){if(v!=null&&wc[i]>=2&&v<sv){sv=v;si=i}});
+      if(si>=0&&wov>0){var sp=Math.round((sv-wov)/wov*100);if(sp<=-25)tips.push({pr:4,c:'warn',m:'🗓️ По '+wn[si]+' гостей в среднем на '+Math.abs(sp)+'% меньше — запланируйте акции на этот день.'})}}}
+  // 6) High returns
+  var retAmt=0;if(doF)retAmt+=agg('furn',p,d).returns_amount||0;if(doT)retAmt+=tcmp(agg('tech',p,d)).ra;
+  if(totalRev>0&&retAmt>0){var rpct=Math.round(retAmt/totalRev*100);if(rpct>8)tips.push({pr:6,c:'bad',m:'↩️ Возвраты '+fU(Math.round(retAmt))+' за период ('+rpct+'% выручки) — проверьте качество товара и работу консультантов.'})}
+  // 1) Фурнитура data quality + 7) low receipts-per-guest (furniture only, same-day)
+  if(doF){var fAll=getEntriesForPeriod('furn',p,d),fMiss=fAll.filter(function(e){return (e.sales_count||0)>0&&!(e.guests>0)}).length,fV=fAll.filter(function(e){return (e.guests||0)>0}),fg=fV.reduce(function(s,e){return s+(e.guests||0)},0),frc=fV.reduce(function(s,e){return s+(e.sales_count||0)},0);
+    if(fMiss>0)tips.push({pr:1,c:'warn',m:'⚠️ Фурнитура: '+fMiss+' '+plur(fMiss,'день','дня','дней')+' с продажами, но без гостей — внесите количество гостей, иначе показатели неточные.'});
+    if(fg>=20){var rr=frc/fg;if(rr<1.0)tips.push({pr:7,c:'warn',m:'🛍️ В фурнитуре только '+Math.round(rr*100)+' покупок на 100 гостей — часть гостей уходит без покупки, усильте работу продавцов в зале.'})}}
+  tips.sort(function(a,b){return a.pr-b.pr});tips=tips.slice(0,5);
+  var body=tips.length?tips.map(function(t){return'<div class="ai '+t.c+'">'+t.m+'</div>'}).join(''):'<div class="ai good">✅ Серьёзных проблем не видно — трафик и выручка в норме.</div>';
+  el.innerHTML=ctx+body;
 }
 
 // ─── FORECAST ───
