@@ -1193,30 +1193,161 @@ function renderDeep(){
 }
 
 // ─── FORECAST ───
+function fcWeekend(dateStr){var wd=new Date(dateStr+'T00:00:00').getDay();return wd===0||wd===6}
+function plur(n,one,few,many){var m10=n%10,m100=n%100;if(m10===1&&m100!==11)return one;if(m10>=2&&m10<=4&&(m100<10||m100>=20))return few;return many}
+function fcLegend(color,dashed){return'<span style="display:inline-block;width:16px;height:0;border-top:3px '+(dashed?'dashed':'solid')+' '+color+';vertical-align:middle;margin-right:4px"></span>'}
+function fcProgress(pct,col,markPct,caption){col=col||(pct>=100?'var(--green)':pct>=90?'var(--yellow)':'var(--red)');var w=Math.max(0,Math.min(pct,100));var mk=(markPct!=null)?'<div title="Норма на сегодня" style="position:absolute;top:-3px;height:12px;width:2px;left:'+Math.max(0,Math.min(markPct,100))+'%;background:var(--text);box-shadow:0 0 0 1.5px var(--bg-solid);border-radius:1px"></div>':'';return'<div class="progress-wrap" style="margin:0 0 10px"><div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--text3);margin-bottom:4px"><span>'+(caption||'Выполнение плана')+'</span><span style="color:'+col+';font-weight:600">'+pct+'%</span></div><div class="progress-bar" style="position:relative;overflow:visible"><div class="progress-fill" style="width:'+w+'%;background:'+col+'"></div>'+mk+'</div></div>'}
+
 function renderForecast(){
   var d=gdi(),mkey=mkk(d),dim=daysInMonth(d),today=new Date(d).getDate(),plans=ldP();
   var stores=ST.store==='all'?['furn','tech']:[ST.store];
-  var html='',pace='';
+  var html='',pace='',charts=[];
   stores.forEach(function(s){
     var ms=agg(s,'month',d),c=s==='tech'?tcmp(ms):null;
     var actA=s==='furn'?(ms.sales_amount||0):(c?c.ta:0),actG=s==='furn'?(ms.guests||0):(c?c.tg:0),actS=s==='furn'?(ms.sales_count||0):(c?c.ts:0);
-    var dailyA=today>0?actA/today:0,dailyG=today>0?actG/today:0,dailyS=today>0?actS/today:0;
-    var foreA=dailyA*dim,foreG=dailyG*dim,foreS=dailyS*dim;
-    var entries=getME(s,mkey),last7=entries.slice(-7),avgL7=last7.length?last7.reduce(function(t,e){return t+revOf(e)},0)/last7.length:0;
-    var foreWeighted=actA+avgL7*(dim-today);
+    var entries=getME(s,mkey),dataDays=entries.length;
     var name=s==='furn'?icon('sofa')+' Фурнитура':icon('plug')+' Техника';
-    var plan=plans[s+'_'+mkey];
-    html+='<div style="margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)"><h4 style="margin-bottom:10px;font-size:.95rem;font-weight:600">'+name+' — '+new Date(mkey+'-01').toLocaleDateString('ru-RU',{month:'long'})+'</h4>';
-    html+='<div class="fc-card"><span class="l">'+icon('calendar')+' Сегодня '+today+' / '+dim+' день</span><span class="v">'+fU(actA)+'</span></div>';
-    html+='<div class="fc-card"><span class="l">'+icon('bar-chart')+' Линейный прогноз</span><span class="v" style="color:var(--accent)">'+fU(Math.round(foreA))+'</span></div>';
-    html+='<div class="fc-card"><span class="l">'+icon('trending-up')+' По последним 7 дням</span><span class="v" style="color:var(--cyan)">'+fU(Math.round(foreWeighted))+'</span></div>';
-    html+='<div class="fc-card"><span class="l">'+icon('users')+' Гости (прогноз)</span><span class="v">'+fmt(Math.round(foreG))+'</span></div>';
-    html+='<div class="fc-card"><span class="l">'+icon('cart')+' Продажи (прогноз)</span><span class="v">'+fmt(Math.round(foreS))+'</span></div>';
-    if(plan){var diff=foreA-plan.plan_sales_amount,pct=plan.plan_sales_amount?(foreA/plan.plan_sales_amount*100).toFixed(0):0;var col=pct>=100?'var(--green)':pct>=80?'var(--yellow)':'var(--red)';html+='<div class="fc-card" style="border-color:'+col+'"><span class="l">'+icon('target')+' vs План '+fU(plan.plan_sales_amount)+'</span><span class="v" style="color:'+col+'">'+pct+'% ('+(diff>0?'+':'')+fU(Math.round(diff))+')</span></div>';var expected=plan.plan_sales_amount/dim*today,gap=actA-expected;var paceCol=gap>=0?'var(--green)':'var(--red)';pace+='<div class="fc-card"><span class="l">'+name+'</span><span class="v" style="color:'+paceCol+'">'+(gap>=0?'+':'')+fU(Math.round(gap))+' '+(gap>=0?'опережение':'отставание')+'</span></div>'}
+    var plan=plans[s+'_'+mkey],planAmt=plan?plan.plan_sales_amount:0;
+    var monthName=new Date(mkey+'-01').toLocaleDateString('ru-RU',{month:'long'});
+    var remaining=Math.max(dim-today,0);
+
+    html+='<div style="margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)">';
+    html+='<h4 style="margin-bottom:12px;font-size:.95rem;font-weight:600">'+name+' — '+monthName+'</h4>';
+
+    // ── Early-month guard: fewer than 5 days of data ──
+    if(dataDays<5){
+      html+='<div class="ai warn" style="margin-bottom:10px">'+icon('info')+' Пока мало данных для точного прогноза (нужно 5+ дней, сейчас '+dataDays+'). Прогноз появится позже.</div>';
+      html+='<div class="fc-card"><span class="l">'+icon('dollar')+' Заработано в этом месяце</span><span class="v">'+fU(actA)+'</span></div>';
+      html+='<div class="fc-card"><span class="l">'+icon('calendar')+' День месяца</span><span class="v">'+today+' из '+dim+'</span></div>';
+      if(planAmt)html+=fcProgress(Math.round(actA/planAmt*100));
+      html+='</div>';
+      return;
+    }
+
+    // ── Weekday-aware daily averages ──
+    var wkAmt=0,wkN=0,weAmt=0,weN=0,amts=[];
+    entries.forEach(function(e){var r=revOf(e);amts.push(r);if(fcWeekend(e.date)){weAmt+=r;weN++}else{wkAmt+=r;wkN++}});
+    var avgAll=dataDays>0?actA/dataDays:0;
+    var avgWk=wkN>0?wkAmt/wkN:avgAll,avgWe=weN>0?weAmt/weN:avgAll;
+    var remWk=0,remWe=0;
+    for(var dd=today+1;dd<=dim;dd++){if(fcWeekend(mkey+'-'+String(dd).padStart(2,'0')))remWe++;else remWk++}
+    var useWeekday=wkN>0&&weN>0;
+    var projRem=useWeekday?(avgWk*remWk+avgWe*remWe):(avgAll*remaining);
+    var forecast=actA+projRem;
+
+    // ── Confidence range from day-to-day variability ──
+    var variance=0;amts.forEach(function(v){variance+=Math.pow(v-avgAll,2)});variance=amts.length?variance/amts.length:0;
+    var sd=Math.sqrt(variance),cv=avgAll>0?sd/avgAll:0,band=Math.min(cv,0.35);
+    var showRange=band>0.05&&remaining>0;
+    var loF=actA+projRem*(1-band),hiF=actA+projRem*(1+band);
+
+    // ── Colours: headline = forecast vs full plan; progress bar = pace (actual vs expected-by-today) ──
+    var fPct=planAmt?forecast/planAmt*100:0;
+    var col=!planAmt?'var(--accent)':fPct>=100?'var(--green)':fPct>=90?'var(--yellow)':'var(--red)';
+    var expByToday=planAmt?planAmt*today/dim:0,pacePct=expByToday>0?actA/expByToday*100:0;
+    var paceCol=!planAmt?'var(--accent)':pacePct>=100?'var(--green)':pacePct>=90?'var(--yellow)':'var(--red)';
+    var paceWord=pacePct>=100?'опережение графика':pacePct>=90?'в графике':'отставание';
+    var missing=Math.max(0,today-dataDays);
+
+    // ── Headline ──
+    html+='<div style="text-align:center;padding:16px 12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px">';
+    html+='<div style="font-size:.72rem;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:6px">'+icon('target')+' Прогноз на конец месяца</div>';
+    html+='<div style="font-family:\'SF Mono\',monospace;font-size:2rem;font-weight:700;color:'+col+';line-height:1.1">'+fU(Math.round(forecast))+'</div>';
+    if(showRange)html+='<div style="font-size:.8rem;color:var(--text2);margin-top:5px;font-family:\'SF Mono\',monospace">≈ '+fU(Math.round(loF))+' – '+fU(Math.round(hiF))+'</div>';
+    if(planAmt)html+='<div style="font-size:.82rem;color:'+col+';margin-top:6px;font-weight:600">'+Math.round(fPct)+'% от плана '+fU(planAmt)+'</div>';
     html+='</div>';
+
+    // ── Missing-data warning ──
+    if(missing>=2)html+='<div class="ai warn" style="margin:0 0 10px">'+icon('alert')+' Не заполнено '+missing+' '+plur(missing,'день','дня','дней')+' из '+today+' — прогноз может быть неточным.</div>';
+
+    // ── Progress bar: fill = % of monthly plan · colour = pace · tick = норма на сегодня ──
+    if(planAmt)html+=fcProgress(Math.round(actA/planAmt*100),paceCol,Math.round(today/dim*100),'Выполнение плана · '+paceWord);
+
+    // ── Plain-language sentence ──
+    var perDayTxt=useWeekday&&Math.abs(avgWk-avgWe)>avgAll*0.15
+      ?'~'+fU(Math.round(avgWk))+' в будни и ~'+fU(Math.round(avgWe))+' в выходные'
+      :'~'+fU(Math.round(avgAll))+' в день';
+    html+='<div class="ai" style="margin:10px 0">'+icon('info')+' Осталось '+remaining+' '+plur(remaining,'день','дня','дней')+'. Если продавать как сейчас ('+perDayTxt+'), к концу месяца выйдет ≈ '+fU(Math.round(forecast))+'.</div>';
+
+    // ── Prominent daily target to hit the plan ──
+    if(planAmt){
+      var toGo=planAmt-actA;
+      if(toGo<=0){
+        html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border:1.5px solid var(--green);background:var(--green-bg);border-radius:var(--radius);margin:10px 0"><span style="font-size:.9rem;font-weight:600;display:flex;align-items:center;gap:6px">'+icon('check-circle')+' Нужно продать сегодня</span><span style="font-weight:700;color:var(--green)">План выполнен 🎉</span></div>';
+      }else if(remaining<=0){
+        html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border:1.5px solid var(--red);background:var(--red-bg);border-radius:var(--radius);margin:10px 0"><span style="font-size:.9rem;font-weight:600;display:flex;align-items:center;gap:6px">'+icon('alert')+' Нужно продать сегодня</span><span style="font-weight:700;color:var(--red)">Месяц завершён</span></div>';
+      }else{
+        var needDay=toGo/remaining,needCol=needDay<=avgAll?'var(--green)':needDay<=avgAll*1.3?'var(--yellow)':'var(--red)';
+        html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border:1.5px solid '+needCol+';background:var(--bg2);border-radius:var(--radius);margin:10px 0"><span style="font-size:.9rem;font-weight:600;display:flex;align-items:center;gap:6px">'+icon('target')+' Нужно продать сегодня</span><span style="font-family:\'SF Mono\',monospace;font-size:1.35rem;font-weight:700;color:'+needCol+'">'+fU(Math.round(needDay))+'</span></div>';
+      }
+    }
+
+    // ── Supporting cards ──
+    var foreG=dataDays>0?Math.round(actG/dataDays*dim):0,foreS=dataDays>0?Math.round(actS/dataDays*dim):0;
+    html+='<div class="fc-card"><span class="l">'+icon('dollar')+' Заработано в этом месяце</span><span class="v">'+fU(actA)+'</span></div>';
+    html+='<div class="fc-card"><span class="l">'+icon('calendar')+' '+today+'-й день из '+dim+' · данных: '+dataDays+'</span><span class="v">~'+fU(Math.round(avgAll))+'/день</span></div>';
+    html+='<div class="fc-card"><span class="l">'+icon('users')+' Ожидается гостей за месяц</span><span class="v">'+fmt(foreG)+'</span></div>';
+    html+='<div class="fc-card"><span class="l">'+icon('cart')+' Ожидается продаж за месяц</span><span class="v">'+fmt(foreS)+'</span></div>';
+
+    // ── Forecast chart (actual + projected) ──
+    var cid='fcChart_'+s;
+    html+='<canvas id="'+cid+'" height="190" style="width:100%;margin-top:12px"></canvas>';
+    html+='<div style="display:flex;gap:16px;justify-content:center;font-size:.72rem;color:var(--text3);margin-top:4px;flex-wrap:wrap">'
+      +'<span>'+fcLegend('var(--accent)',false)+'Факт</span>'
+      +'<span>'+fcLegend('var(--cyan)',true)+'Прогноз</span>'
+      +(planAmt?'<span>'+fcLegend('var(--green)',true)+'Темп плана</span>':'')
+      +'</div>';
+    var byDay={};entries.forEach(function(e){var k=+e.date.slice(8,10);byDay[k]=(byDay[k]||0)+revOf(e)});
+    var actPts=[],cum=0,lastDay=Math.min(today,dim);
+    for(var da=1;da<=lastDay;da++){cum+=(byDay[da]||0);actPts.push({x:da,y:cum})}
+    var projPts=[{x:lastDay,y:cum}],pc=cum;
+    for(var db=lastDay+1;db<=dim;db++){pc+=useWeekday?(fcWeekend(mkey+'-'+String(db).padStart(2,'0'))?avgWe:avgWk):avgAll;projPts.push({x:db,y:pc})}
+    charts.push({id:cid,act:actPts,proj:projPts,plan:planAmt,dim:dim});
+
+    html+='</div>';
+
+    // Pace (kept)
+    if(planAmt){var expected=planAmt/dim*today,gap=actA-expected,paceCol=gap>=0?'var(--green)':'var(--red)';
+      pace+='<div class="fc-card"><span class="l">'+name+'</span><span class="v" style="color:'+paceCol+'">'+(gap>=0?'+':'')+fU(Math.round(gap))+' '+(gap>=0?'опережение':'отставание')+'</span></div>'}
   });
   document.getElementById('forecastContent').innerHTML=html||'<div style="color:var(--text3)">Нет данных</div>';
   document.getElementById('paceContent').innerHTML=pace||'<div style="color:var(--text3)">Установите план для расчёта темпа</div>';
+  charts.forEach(function(ch){renderForecastChart(ch.id,ch.act,ch.proj,ch.plan,ch.dim)});
+}
+
+function renderForecastChart(canvasId,actPts,projPts,planAmt,dim){
+  var canvas=document.getElementById(canvasId);if(!canvas||canvas.offsetWidth===0){setTimeout(function(){renderForecastChart(canvasId,actPts,projPts,planAmt,dim)},80);return}
+  // Crisp high-DPI rendering in true CSS pixels (no horizontal squish)
+  var dpr=window.devicePixelRatio||1,W=canvas.offsetWidth,H=230;
+  canvas.style.height=H+'px';canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);
+  var ctx=canvas.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+  var pL=58,pR=16,pT=14,pB=28,cW=W-pL-pR,cH=H-pT-pB;
+  var allY=actPts.concat(projPts).map(function(p){return p.y});if(planAmt)allY.push(planAmt);
+  var mx=Math.max.apply(null,allY.concat([1]))*1.1;
+  var cs=getComputedStyle(document.body);
+  var muted=cs.getPropertyValue('--text3').trim()||'#8e8e93';
+  var accent=cs.getPropertyValue('--accent').trim()||'#1d1d1f';
+  var cyan=cs.getPropertyValue('--cyan').trim()||'#5b6a78';
+  var green=cs.getPropertyValue('--green').trim()||'#3a8a5a';
+  function X(day){return pL+((day-1)/(dim-1||1))*cW}
+  function Y(v){return pT+cH-(v/mx)*cH}
+  // Grid + Y-axis money labels
+  ctx.font='12px -apple-system,system-ui,sans-serif';ctx.textBaseline='middle';
+  for(var i=0;i<=4;i++){var yy=pT+(cH/4)*i;ctx.strokeStyle='rgba(128,128,128,.16)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pL,yy);ctx.lineTo(W-pR,yy);ctx.stroke();ctx.fillStyle=muted;ctx.textAlign='right';ctx.fillText('$'+fS(Math.round(mx-(mx/4)*i)),pL-6,yy)}
+  // X-axis day labels (always include first and last day)
+  ctx.textAlign='center';ctx.textBaseline='top';var step=Math.max(1,Math.ceil(dim/8)),drawn={};
+  for(var dxx=1;dxx<=dim;dxx+=step){ctx.fillStyle=muted;ctx.fillText(String(dxx),X(dxx),H-pB+10);drawn[dxx]=1}
+  if(!drawn[dim]){ctx.fillStyle=muted;ctx.fillText(String(dim),X(dim),H-pB+10)}
+  // Plan pace line: dashed green, straight from day-1 pace up to full target
+  if(planAmt){ctx.strokeStyle=green;ctx.lineWidth=2;ctx.setLineDash([6,5]);ctx.beginPath();ctx.moveTo(X(1),Y(planAmt/dim));ctx.lineTo(X(dim),Y(planAmt));ctx.stroke();ctx.setLineDash([])}
+  // Projected line: dashed cyan, continues from where actual ends
+  if(projPts.length>1){ctx.strokeStyle=cyan;ctx.lineWidth=2.5;ctx.lineJoin='round';ctx.setLineDash([7,5]);ctx.beginPath();projPts.forEach(function(p,i){var x=X(p.x),y=Y(p.y);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();ctx.setLineDash([])}
+  // Actual cumulative line: soft fill + solid stroke, drawn on top
+  if(actPts.length){
+    if(actPts.length>1){ctx.beginPath();ctx.moveTo(X(actPts[0].x),Y(0));actPts.forEach(function(p){ctx.lineTo(X(p.x),Y(p.y))});ctx.lineTo(X(actPts[actPts.length-1].x),Y(0));ctx.closePath();ctx.fillStyle='rgba(128,128,128,.09)';ctx.fill()}
+    ctx.strokeStyle=accent;ctx.lineWidth=3;ctx.lineJoin='round';ctx.beginPath();actPts.forEach(function(p,i){var x=X(p.x),y=Y(p.y);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();
+    var lp=actPts[actPts.length-1];ctx.fillStyle=accent;ctx.beginPath();ctx.arc(X(lp.x),Y(lp.y),3.5,0,Math.PI*2);ctx.fill()
+  }
 }
 
 // ─── BACKUP / SEED ───
