@@ -628,7 +628,13 @@ tbody tr:hover{background:var(--bg3)}
 
     <div id="view-analytics" class="hidden">
       <div class="fade-in">
-        <div class="card" style="margin-bottom:12px"><div class="card-title" id="chartTitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>Тренд продаж</div><canvas id="chartCanvas" height="220" style="width:100%"></canvas></div>
+        <div class="card" style="margin-bottom:12px"><div class="card-title" id="trafficTitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Трафик гостей</div><canvas id="trafficChart" height="220" style="width:100%"></canvas><div id="trafficInsight" style="margin-top:8px;font-size:.84rem;color:var(--text2)"></div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div class="card"><div class="card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Сравнение недель</div><div id="weekCompare"></div></div>
+          <div class="card"><div class="card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Из чего складывается выручка</div><div id="revBreakdown"></div></div>
+        </div>
+        <div class="card" style="margin-bottom:12px"><div class="card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>По дням недели — трафик</div><div id="dowAnalysis"></div></div>
+        <div class="card" style="margin-bottom:12px"><div class="card-title" id="chartTitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>Тренд выручки</div><canvas id="chartCanvas" height="220" style="width:100%"></canvas></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
           <div class="card"><div class="card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>Чеков на гостя (тренд)</div><canvas id="convChart" height="200" style="width:100%"></canvas></div>
           <div class="card"><div class="card-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>Возвраты % (тренд)</div><canvas id="retChart" height="200" style="width:100%"></canvas></div>
@@ -908,6 +914,7 @@ function getRangeFromTo(){return{from:document.getElementById('rangeFrom').value
 function daysInMonth(ymd){return new Date(+ymd.slice(0,4),+ymd.slice(5,7),0).getDate()}
 function periodBounds(period,ref){if(period==='range'){var r=getRangeFromTo();return{startDate:r.from,endDate:r.to}}if(period==='day')return{startDate:ref,endDate:ref};if(period==='week'){var w=getWeekRange(ref);return{startDate:w.start,endDate:w.end}}if(period==='month'){var d=daysInMonth(ref);return{startDate:ref.slice(0,7)+'-01',endDate:ref.slice(0,7)+'-'+String(d).padStart(2,'0')}}return{startDate:ref.slice(0,4)+'-01-01',endDate:ref.slice(0,4)+'-12-31'}}
 function prevPeriodBounds(period,ref){var d=new Date(ref);if(period==='day'){d.setDate(d.getDate()-1);return periodBounds('day',d.toISOString().slice(0,10))}if(period==='week'){d.setDate(d.getDate()-7);return periodBounds('week',d.toISOString().slice(0,10))}if(period==='month'){d.setMonth(d.getMonth()-1);return periodBounds('month',d.toISOString().slice(0,10))}if(period==='year'){d.setFullYear(d.getFullYear()-1);return periodBounds('year',d.toISOString().slice(0,10))}if(period==='range'){var r=getRangeFromTo();if(!r.from||!r.to)return{startDate:'',endDate:''};function shM(s){var p=s.split('-'),y=+p[0],m=+p[1],dd=+p[2];m-=1;if(m<1){m=12;y-=1}var ld=new Date(y,m,0).getDate();if(dd>ld)dd=ld;return y+'-'+String(m).padStart(2,'0')+'-'+String(dd).padStart(2,'0')}return{startDate:shM(r.from),endDate:shM(r.to)}}return{startDate:'',endDate:''}}
+function compareRanges(period,d){var pb=periodBounds(period,d),pp=prevPeriodBounds(period,d);if(period==='range')return{cs:pb.startDate,ce:pb.endDate,ao:pb.endDate,ps:pp.startDate,pe:pp.endDate};var today=new Date().toISOString().slice(0,10);var asOf=today<pb.startDate?pb.startDate:(today<pb.endDate?today:pb.endDate);var elapsed=Math.round((new Date(asOf)-new Date(pb.startDate))/86400000)+1;var pe=addDays(pp.startDate,elapsed-1);if(pe>pp.endDate)pe=pp.endDate;return{cs:pb.startDate,ce:pb.endDate,ao:asOf,ps:pp.startDate,pe:pe}}
 
 function aggBetween(store,startDate,endDate){var data=ld(),stores=store==='all'?['furn','tech']:[store];if(!startDate||!endDate)return{_count:0};var entries=[];stores.forEach(function(s){Object.entries(data).forEach(function(kv){var k=kv[0],v=kv[1];if(!k.startsWith(s+'_'))return;var d=k.substring(s.length+1);if(d>=startDate&&d<=endDate)entries.push(v)})});var sum={_count:entries.length};var ids=new Set();entries.forEach(function(e){Object.keys(e).forEach(function(k){if(typeof e[k]==='number')ids.add(k)})});ids.forEach(function(id){sum[id]=entries.reduce(function(a,e){return a+(Number(e[id])||0)},0)});return sum}
 function agg(store,period,ref){var pb=periodBounds(period,ref);return aggBetween(store,pb.startDate,pb.endDate)}
@@ -923,7 +930,7 @@ function pLabel(){var p=document.getElementById('periodSelect').value;if(p==='ra
 // ─── DASHBOARD ───
 function renderDash(){
   var d=gdi(),p=document.getElementById('periodSelect').value,st=ST.store,sum=agg(st,p,d),pl=pLabel();
-  var pp=prevPeriodBounds(p,d),prev=aggBetween(st,pp.startDate,pp.endDate);
+  var cr=compareRanges(p,d),prev=aggBetween(st,cr.ps,cr.pe);
   var stats=[];
   if(st==='furn'){
     var c=fcmp(sum),pc=fcmp(prev);
@@ -969,7 +976,7 @@ function renderPeriodCompare(st,p,d,sum,prev){
     rows=[['Гости',cur.tg,prv.tg,false],['Продажи',cur.ts,prv.ts,false],['Выручка',cur.ta,prv.ta,true],['Ср.чек',cur.avg,prv.avg,true],['Чеков на гостя',cur.rpg,prv.rpg,false],['Возвраты $',cur.ra,prv.ra,true]];
   } else {
     var fSum=agg('furn',p,d),tSum=agg('tech',p,d),tC=tcmp(tSum);
-    var pp=prevPeriodBounds(p,d),fPrev=aggBetween('furn',pp.startDate,pp.endDate),tPrev=aggBetween('tech',pp.startDate,pp.endDate),tCp=tcmp(tPrev);
+    var cr=compareRanges(p,d),fPrev=aggBetween('furn',cr.ps,cr.pe),tPrev=aggBetween('tech',cr.ps,cr.pe),tCp=tcmp(tPrev);
     rows=[['Гости',(fSum.guests||0)+tC.tg,(fPrev.guests||0)+tCp.tg,false],['Продажи',(fSum.sales_count||0)+tC.ts,(fPrev.sales_count||0)+tCp.ts,false],['Выручка',(fSum.sales_amount||0)+tC.ta,(fPrev.sales_amount||0)+tCp.ta,true]];
   }
   var html='<div class="compare-grid"><div class="compare-cell"><h4>Текущий</h4>';
@@ -1133,8 +1140,83 @@ function closePM(){document.getElementById('planModal').classList.remove('show')
 function savePlan(){if(!canEdit())return;var plans=ldP(),s=document.getElementById('pln_s').value,m=document.getElementById('pln_m').value,key=s+'_'+m,old=plans[key]?JSON.parse(JSON.stringify(plans[key])):null;plans[key]={};PF.forEach(function(f){plans[key][f.id]=grv('pln_'+f.id)});plans[key].updated_at=new Date().toISOString();plans[key].updated_by=currentUser;svP(plans);saveToAPI('savePlan',{key:key,plan:plans[key]});audit('plan',key,old,plans[key]);pushUndo('план '+key,function(){var pp=ldP();if(old)pp[key]=old;else delete pp[key];svP(pp);saveToAPI('savePlan',{key:key,plan:old||{}})});closePM();toast('🎯 План сохранён!');renderAll()}
 
 // ─── ANALYTICS ───
-function renderAnalytics(){renderChart();renderConvChart();renderRetChart();renderBest();renderComp();renderDeep()}
+function renderAnalytics(){renderTrafficChart();renderWeekCompare();renderRevBreakdown();renderDow();renderChart();renderConvChart();renderRetChart();renderBest();renderComp();renderDeep()}
 function getAPeriod(){return document.getElementById('periodSelect').value}
+function addDays(ds,n){var dt=new Date(ds);dt.setDate(dt.getDate()+n);return dt.toISOString().slice(0,10)}
+function sg(n){return (n>0?'+':'')+n+'%'}
+function rangeMetrics(store,from,to){var r={guests:0,sales:0,rev:0};if(!from||!to)return r;if(store!=='tech'){var f=aggBetween('furn',from,to);r.guests+=f.guests||0;r.sales+=f.sales_count||0;r.rev+=f.sales_amount||0}if(store!=='furn'){var t=tcmp(aggBetween('tech',from,to));r.guests+=t.tg;r.sales+=t.ts;r.rev+=t.ta}return r}
+function cmpRow(label,c,p,money){var diff=c-p,pct=p?Math.round(diff/p*100):(c>0?100:0);var col=diff>0?'var(--green)':diff<0?'var(--red)':'var(--text3)';var arrow=diff>0?'▲':diff<0?'▼':'•';return '<div style="display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--border);font-size:.84rem"><span>'+label+'</span><span>'+(money?fU(c):fmt(c))+' <span style="color:var(--text3)">← '+(money?fU(p):fmt(p))+'</span> <b style="color:'+col+'">'+arrow+sg(pct)+'</b></span></div>'}
+
+function renderTrafficChart(){
+  var canvas=document.getElementById('trafficChart');if(!canvas||canvas.offsetWidth===0){setTimeout(renderTrafficChart,80);return}
+  var d=gdi(),p=getAPeriod(),st=ST.store,slots=aSlots(p,d),insight=document.getElementById('trafficInsight');
+  if(slots.length<2){chartMsg('trafficChart','Недостаточно данных для графика\nВыберите период «Неделя» или «Месяц»');if(insight)insight.textContent='';return}
+  var labels=slots.map(function(s){return s.label}),vals=slots.map(function(sl){return aMetrics(st,sl.per,sl.ref).guests});
+  var ctx=canvas.getContext('2d');
+  var W=canvas.width=canvas.offsetWidth*2,H=canvas.height=440;ctx.clearRect(0,0,W,H);
+  var mx=Math.max.apply(null,vals.concat([1])),pL=70,pR=30,pT=30,pB=60,cW=W-pL-pR,cH=H-pT-pB;
+  var muted=getComputedStyle(document.body).getPropertyValue('--text3').trim()||'#8e8e93';
+  var accent=getComputedStyle(document.body).getPropertyValue('--accent').trim()||'#1d1d1f';
+  ctx.strokeStyle='rgba(128,128,128,.12)';ctx.lineWidth=1;
+  for(var i=0;i<=4;i++){var y=pT+(cH/4)*i;ctx.beginPath();ctx.moveTo(pL,y);ctx.lineTo(W-pR,y);ctx.stroke();ctx.fillStyle=muted;ctx.font='20px -apple-system,sans-serif';ctx.textAlign='right';ctx.fillText(fS(Math.round(mx-(mx/4)*i)),pL-10,y+6)}
+  var gap=cW/vals.length,bW=Math.min(gap*.6,44);
+  vals.forEach(function(v,i){var x=pL+gap*i+(gap-bW)/2,h=mx>0?(v/mx)*cH:0,y=pT+cH-h;var g=ctx.createLinearGradient(x,y,x,pT+cH);g.addColorStop(0,'#5ac8fa');g.addColorStop(1,'#3a95c8');ctx.fillStyle=g;rRect(ctx,x,y,bW,Math.max(h,1),4);ctx.fill();ctx.fillStyle=muted;ctx.font=(vals.length>20?'14':'18')+'px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText(labels[i],x+bW/2,H-20)});
+  var nz=vals.filter(function(v){return v>0}),avg=nz.length?nz.reduce(function(a,b){return a+b},0)/nz.length:0;
+  if(avg>0){var ay=pT+cH-(avg/mx)*cH;ctx.strokeStyle=accent;ctx.lineWidth=2;ctx.setLineDash([10,7]);ctx.beginPath();ctx.moveTo(pL,ay);ctx.lineTo(W-pR,ay);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=accent;ctx.font='18px -apple-system,sans-serif';ctx.textAlign='left';ctx.fillText('среднее '+fmt(Math.round(avg)),pL+8,ay-8)}
+  if(insight){var total=vals.reduce(function(a,b){return a+b},0);insight.innerHTML=icon('users')+' Всего '+fmt(total)+' гостей · в среднем '+fmt(Math.round(avg))+(p==='year'?' в месяц':' в день')}
+}
+
+function renderWeekCompare(){
+  var el=document.getElementById('weekCompare');if(!el)return;
+  var d=gdi(),st=ST.store,cr=compareRanges('week',d);
+  var cur=rangeMetrics(st,cr.cs,cr.ce),prev=rangeMetrics(st,cr.ps,cr.pe);
+  if(cur.guests===0&&prev.guests===0){el.innerHTML='<div style="color:var(--text3);font-size:.84rem">Нет данных для сравнения</div>';return}
+  var diff=cur.guests-prev.guests,pct=prev.guests?Math.round(diff/prev.guests*100):(cur.guests>0?100:0),col=diff>0?'var(--green)':diff<0?'var(--red)':'var(--text3)';
+  var cRPG=cur.guests>0?cur.rev/cur.guests:0,pRPG=prev.guests>0?prev.rev/prev.guests:0;
+  el.innerHTML='<div style="font-size:.95rem;font-weight:600;margin-bottom:8px">'+icon('users')+' Гости: '+fmt(cur.guests)+' <span style="color:var(--text3);font-weight:400">на прошлой '+fmt(prev.guests)+'</span> <span style="color:'+col+';font-weight:700">('+sg(pct)+')</span></div>'
+    +cmpRow('Выручка',Math.round(cur.rev),Math.round(prev.rev),true)
+    +cmpRow('Выручка на гостя',Math.round(cRPG),Math.round(pRPG),true)
+    +'<div style="font-size:.72rem;color:var(--text3);margin-top:6px">'+cr.cs.slice(5)+'–'+cr.ao.slice(5)+' vs '+cr.ps.slice(5)+'–'+cr.pe.slice(5)+'</div>';
+}
+
+function renderRevBreakdown(){
+  var el=document.getElementById('revBreakdown');if(!el)return;
+  var d=gdi(),p=getAPeriod(),st=ST.store,cr=compareRanges(p,d);
+  var cur=rangeMetrics(st,cr.cs,cr.ce),prev=rangeMetrics(st,cr.ps,cr.pe);
+  if(cur.guests===0){el.innerHTML='<div style="color:var(--text3);font-size:.84rem">Нет данных о гостях</div>';return}
+  var cRPG=cur.rev/cur.guests,pRPG=prev.guests>0?prev.rev/prev.guests:0;
+  var html='<div style="text-align:center;padding:6px 0;font-size:.98rem"><b>'+fU(Math.round(cur.rev))+'</b> = '+fmt(cur.guests)+' × '+fU(Math.round(cRPG))+'</div>';
+  html+='<div style="font-size:.7rem;color:var(--text3);text-align:center;margin-bottom:10px">Выручка = Гости × Выручка на гостя</div>';
+  if(prev.guests>0&&prev.rev>0){
+    var gP=Math.round((cur.guests-prev.guests)/prev.guests*100),vP=Math.round((cRPG-pRPG)/pRPG*100),rP=Math.round((cur.rev-prev.rev)/prev.rev*100);
+    html+=cmpRow('Гости',cur.guests,prev.guests,false)+cmpRow('Выручка на гостя',Math.round(cRPG),Math.round(pRPG),true)+cmpRow('Выручка',Math.round(cur.rev),Math.round(prev.rev),true);
+    var driver=Math.abs(gP)>=Math.abs(vP)?'трафик (гостей '+sg(gP)+')':'выручка на гостя ('+sg(vP)+')';
+    html+='<div class="ai" style="margin-top:8px;font-size:.82rem">'+icon('info')+' Выручка '+sg(rP)+': главный фактор — '+driver+'.</div>';
+  } else html+='<div style="font-size:.72rem;color:var(--text3)">Нет данных за прошлый период для сравнения</div>';
+  el.innerHTML=html;
+}
+
+function renderDow(){
+  var el=document.getElementById('dowAnalysis');if(!el)return;
+  var d=gdi(),p=getAPeriod(),st=ST.store,entries=getEntriesForPeriod(st==='all'?'all':st,p,d),byDate={};
+  entries.forEach(function(e){var g=0;if(e.store==='furn')g=e.guests||0;else SRC.forEach(function(x){g+=(e['g_'+x.id]||0)});byDate[e.date]=(byDate[e.date]||0)+g});
+  var dates=Object.keys(byDate);
+  if(dates.length<3){el.innerHTML='<div style="color:var(--text3);font-size:.84rem">Недостаточно данных — выберите период «Месяц» или больше</div>';return}
+  var names=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],gen=['понедельникам','вторникам','средам','четвергам','пятницам','субботам','воскресеньям'];
+  var sums=[0,0,0,0,0,0,0],cnts=[0,0,0,0,0,0,0];
+  dates.forEach(function(dt){var wd=new Date(dt+'T00:00:00').getDay(),idx=wd===0?6:wd-1;sums[idx]+=byDate[dt];cnts[idx]++});
+  var avgs=sums.map(function(s,i){return cnts[i]?s/cnts[i]:null}),valid=avgs.filter(function(v){return v!=null});
+  var overall=valid.length?valid.reduce(function(a,b){return a+b},0)/valid.length:0,mx=Math.max.apply(null,valid.concat([1]));
+  var html='';
+  avgs.forEach(function(v,i){
+    if(v==null){html+='<div style="display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--text3);padding:3px 0"><span style="width:26px">'+names[i]+'</span><span>нет данных</span></div>';return}
+    var pct=overall>0?Math.round((v-overall)/overall*100):0,col=pct<=-20?'var(--red)':pct>=20?'var(--green)':'var(--accent)',wd=mx>0?Math.round(v/mx*100):0;
+    html+='<div style="display:flex;align-items:center;gap:8px;padding:3px 0"><span style="width:26px;font-size:.8rem;font-weight:600">'+names[i]+'</span><div style="flex:1;background:var(--bg4);border-radius:4px;height:16px;overflow:hidden"><div style="width:'+wd+'%;height:100%;background:'+col+'"></div></div><span style="width:96px;text-align:right;font-size:.78rem;font-variant-numeric:tabular-nums">'+fmt(Math.round(v*10)/10)+' <span style="color:'+col+'">'+sg(pct)+'</span></span></div>';
+  });
+  var si=-1,sv=1e9;avgs.forEach(function(v,i){if(v!=null&&v<sv){sv=v;si=i}});
+  if(si>=0&&overall>0){var spct=Math.round((sv-overall)/overall*100);if(spct<=-15)html+='<div class="ai" style="margin-top:8px;font-size:.82rem">'+icon('info')+' По '+gen[si]+' в среднем на '+Math.abs(spct)+'% меньше гостей.</div>'}
+  el.innerHTML=html;
+}
 function rRect(ctx,x,y,w,h,r){if(ctx.roundRect){ctx.beginPath();ctx.roundRect(x,y,w,h,r);return}var rr=Math.min(r,Math.abs(w)/2,Math.abs(h)/2);ctx.beginPath();ctx.moveTo(x+rr,y);ctx.lineTo(x+w-rr,y);ctx.quadraticCurveTo(x+w,y,x+w,y+rr);ctx.lineTo(x+w,y+h-rr);ctx.quadraticCurveTo(x+w,y+h,x+w-rr,y+h);ctx.lineTo(x+rr,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-rr);ctx.lineTo(x,y+rr);ctx.quadraticCurveTo(x,y,x+rr,y)}
 
 function aSlots(p,d){var slots=[];if(p==='year'){var yr=d.slice(0,4);for(var m=1;m<=12;m++)slots.push({per:'month',ref:yr+'-'+String(m).padStart(2,'0')+'-01',label:new Date(yr,m-1).toLocaleDateString('ru-RU',{month:'short'})})}else if(p==='month'){var mk=d.slice(0,7),dim=daysInMonth(d);for(var dy=1;dy<=dim;dy++)slots.push({per:'day',ref:mk+'-'+String(dy).padStart(2,'0'),label:String(dy)})}else if(p==='week'||p==='range'){var b=p==='week'?getWeekRange(d):getRangeFromTo();var from=p==='week'?b.start:b.from,to=p==='week'?b.end:b.to;if(from&&to){var cur=new Date(from),end=new Date(to);while(cur<=end){slots.push({per:'day',ref:cur.toISOString().slice(0,10),label:cur.toLocaleDateString('ru-RU',{day:'numeric',month:'short'})});cur.setDate(cur.getDate()+1)}}}else{slots.push({per:'day',ref:d,label:new Date(d).toLocaleDateString('ru-RU',{day:'numeric',month:'short'})})}return slots}
@@ -1145,7 +1227,7 @@ function renderChart(){
   var canvas=document.getElementById('chartCanvas');if(!canvas||canvas.offsetWidth===0){setTimeout(renderChart,80);return}
   var d=gdi(),p=getAPeriod();
   var titles={day:'день',week:'неделя',month:'по дням',year:'по месяцам',range:'диапазон'};
-  document.getElementById('chartTitle').innerHTML=icon('trending-up')+' Тренд продаж · '+(titles[p]||'');
+  document.getElementById('chartTitle').innerHTML=icon('trending-up')+' Тренд выручки · '+(titles[p]||'');
   var slots=aSlots(p,d);
   if(slots.length<2){chartMsg('chartCanvas','Недостаточно данных для графика\nВыберите период «Неделя» или «Месяц»');return}
   var st=ST.store,labels=[],vals=[];
@@ -1189,6 +1271,8 @@ function renderDeep(){
   var days=Object.keys(byDate).sort(),dayRevs=days.map(function(dt){return byDate[dt]});
   if(days.length<3){document.getElementById('deepAnalysis').innerHTML='<div class="ai good">Нужно 3+ дня данных.</div>';return}
   var totalRev=dayRevs.reduce(function(a,b){return a+b},0),avgD=totalRev/days.length;
+  var pbG=periodBounds(p,d),tgAll=rangeMetrics(ST.store,pbG.startDate,pbG.endDate).guests;
+  if(tgAll>0)tips.push({t:'',m:'👥 Всего гостей: '+fmt(tgAll)+' · в среднем '+fmt(Math.round(tgAll/days.length))+' гостей/день'});
   var doF=ST.store==='furn'||ST.store==='all',doT=ST.store==='tech'||ST.store==='all';
   if(doF){var fE=getEntriesForPeriod('furn',p,d),fBad=fE.filter(function(e){return (e.sales_count||0)>0&&!(e.guests>0)}).length,fV=fE.filter(function(e){return (e.guests||0)>0}),fg=fV.reduce(function(s,e){return s+(e.guests||0)},0),frc=fV.reduce(function(s,e){return s+(e.sales_count||0)},0);
     if(fg>0)tips.push({t:'',m:'🧾 Фурнитура — чеков на гостя: '+(frc/fg).toFixed(2)+' ('+fmt(frc)+' чеков / '+fmt(fg)+' гостей)'});else tips.push({t:'warn',m:'🛋️ Фурнитура — чеков на гостя: Нет данных о гостях'});
