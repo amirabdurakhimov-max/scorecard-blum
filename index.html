@@ -1202,6 +1202,7 @@ function renderForecast(){
   var d=gdi(),mkey=mkk(d),dim=daysInMonth(d),today=new Date(d).getDate(),plans=ldP();
   var stores=ST.store==='all'?['furn','tech']:[ST.store];
   var html='',pace='',charts=[];
+  var realToday=new Date().toISOString().slice(0,10),isCurMonth=(mkey===realToday.slice(0,7)),alertRows=[];
   stores.forEach(function(s){
     var ms=agg(s,'month',d),c=s==='tech'?tcmp(ms):null;
     var actA=s==='furn'?(ms.sales_amount||0):(c?c.ta:0),actG=s==='furn'?(ms.guests||0):(c?c.tg:0),actS=s==='furn'?(ms.sales_count||0):(c?c.ts:0);
@@ -1210,6 +1211,21 @@ function renderForecast(){
     var plan=plans[s+'_'+mkey],planAmt=plan?plan.plan_sales_amount:0;
     var monthName=new Date(mkey+'-01').toLocaleDateString('ru-RU',{month:'long'});
     var remaining=Math.max(dim-today,0);
+
+    // ── Collect alerts (current month only; forecast-independent ones) ──
+    if(isCurMonth){
+      if(!entries.some(function(e){return e.date===realToday}))
+        alertRows.push({s:s,prio:2,col:'var(--yellow)',bg:'var(--yellow-bg)',txt:'📝 Данные за сегодня не внесены'});
+      if(dataDays>=6){
+        var l3=entries.slice(-3),bs=entries.slice(0,-3);
+        var a3=l3.reduce(function(t,e){return t+revOf(e)},0)/3,ab=bs.reduce(function(t,e){return t+revOf(e)},0)/bs.length;
+        if(ab>0){var chg=(a3-ab)/ab*100;
+          if(chg<=-20)alertRows.push({s:s,prio:3,col:'var(--red)',bg:'var(--red-bg)',txt:'📉 Продажи за последние 3 дня на '+Math.round(-chg)+'% ниже среднего'});
+          else if(chg>=20)alertRows.push({s:s,prio:4,col:'var(--green)',bg:'var(--green-bg)',txt:'📈 Продажи за последние 3 дня на '+Math.round(chg)+'% выше среднего'});}
+      }
+      if(planAmt&&actA>=planAmt)
+        alertRows.push({s:s,prio:4,col:'var(--green)',bg:'var(--green-bg)',txt:'🎉 План на месяц уже выполнен'});
+    }
 
     html+='<div style="margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)">';
     html+='<h4 style="margin-bottom:12px;font-size:.95rem;font-weight:600">'+name+' — '+monthName+'</h4>';
@@ -1248,6 +1264,10 @@ function renderForecast(){
     var paceCol=!planAmt?'var(--accent)':pacePct>=100?'var(--green)':pacePct>=90?'var(--yellow)':'var(--red)';
     var paceWord=pacePct>=100?'опережение графика':pacePct>=90?'в графике':'отставание';
     var missing=Math.max(0,today-dataDays);
+
+    // ── Behind-plan alert (needs a real forecast) ──
+    if(isCurMonth&&planAmt&&forecast<planAmt&&actA<planAmt&&remaining>0)
+      alertRows.push({s:s,prio:1,col:'var(--red)',bg:'var(--red-bg)',txt:'🔴 Отставание от плана — нужно '+fU(Math.round((planAmt-actA)/remaining))+' в день, чтобы догнать'});
 
     // ── Headline ──
     html+='<div style="text-align:center;padding:16px 12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px">';
@@ -1310,6 +1330,15 @@ function renderForecast(){
     if(planAmt){var expected=planAmt/dim*today,gap=actA-expected,paceCol=gap>=0?'var(--green)':'var(--red)';
       pace+='<div class="fc-card"><span class="l">'+name+'</span><span class="v" style="color:'+paceCol+'">'+(gap>=0?'+':'')+fU(Math.round(gap))+' '+(gap>=0?'опережение':'отставание')+'</span></div>'}
   });
+  // ── Assemble compact alerts block (max 3 per store, priority-sorted) ──
+  var alertRows2='';
+  stores.forEach(function(s){
+    alertRows.filter(function(a){return a.s===s}).sort(function(a,b){return a.prio-b.prio}).slice(0,3).forEach(function(a){
+      var lbl=stores.length>1?'<b style="font-weight:600;opacity:.7">'+(s==='furn'?'Фурнитура':'Техника')+':</b> ':'';
+      alertRows2+='<div style="padding:7px 11px;border-radius:8px;background:'+a.bg+';color:'+a.col+';font-size:.84rem;margin-bottom:6px">'+lbl+a.txt+'</div>';
+    });
+  });
+  if(alertRows2)html='<div style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)"><div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:600;margin-bottom:8px">'+icon('alert')+' Уведомления</div>'+alertRows2+'</div>'+html;
   document.getElementById('forecastContent').innerHTML=html||'<div style="color:var(--text3)">Нет данных</div>';
   document.getElementById('paceContent').innerHTML=pace||'<div style="color:var(--text3)">Установите план для расчёта темпа</div>';
   charts.forEach(function(ch){renderForecastChart(ch.id,ch.act,ch.proj,ch.plan,ch.dim)});
